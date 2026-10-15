@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { RegisteredModel, UserPersona, AuditLogEntry, UserRole } from '@/types/governance';
 import { INITIAL_REGISTERED_MODELS, INITIAL_PERSONAS, INITIAL_AUDIT_LOGS } from './initial-models';
+import { canPerform } from './permissions';
 
 interface GovernanceContextType {
   // Authentication & Current User
@@ -179,8 +180,18 @@ export function GovernanceProvider({ children }: { children: React.ReactNode }) 
 
   const selectedModel = models.find(m => m.id === selectedModelId) || models[0];
 
+  const deny = (message: string) => {
+    if (typeof window !== 'undefined') window.alert(message);
+  };
+  const allowed = (action: Parameters<typeof canPerform>[1], message: string) => {
+    if (canPerform(currentUser.role, action)) return true;
+    deny(message);
+    return false;
+  };
+
   // 1. Model Registry: Register New Model
   const registerModel = (newModelData: Partial<RegisteredModel>) => {
+    if (!allowed('register-model', 'Only Admins and Data Scientists can register models.')) return;
     const newId = `mod-custom-${Date.now().toString(36)}`;
     const versionTag = 'v1.0.0';
     const acc = newModelData.baselineAccuracy || 91.0;
@@ -265,6 +276,12 @@ export function GovernanceProvider({ children }: { children: React.ReactNode }) 
 
   // 2. Version Control: Set which version is active
   const setActiveVersion = (modelId: string, versionId: string) => {
+    if (!allowed('activate-version', 'Only Admins and MLOps Engineers can activate versions.')) return;
+    const modelForActivation = models.find(m => m.id === modelId);
+    if (modelForActivation && modelForActivation.currentApprovalStatus !== 'Approved') {
+      deny('This model version cannot be activated until it has an Approved governance status.');
+      return;
+    }
     let activatedVersionTag = '';
     const updated = models.map(m => {
       if (m.id !== modelId) return m;
@@ -298,6 +315,7 @@ export function GovernanceProvider({ children }: { children: React.ReactNode }) 
 
   // 3. Approval Management: Submit for review
   const submitForReview = (modelId: string, remarks: string) => {
+    if (!allowed('submit-review', 'Only Admins and Data Scientists can submit models for review.')) return;
     const updated = models.map(m => {
       if (m.id !== modelId) return m;
       const newRecord = {
@@ -331,6 +349,14 @@ export function GovernanceProvider({ children }: { children: React.ReactNode }) 
 
   // 3. Approval Management: Approve model
   const approveModel = (modelId: string, comments: string) => {
+    if (!allowed('review-approval', 'Only Admins, Compliance Officers, and AI Reviewers can review approvals.')) return;
+    const pendingModel = models.find(m => m.id === modelId);
+    const pendingRecord = pendingModel?.approvalHistory.find(rec => rec.status === 'Pending Review');
+    if (!pendingRecord) { deny('There is no pending approval request for this model.'); return; }
+    if (pendingRecord.submittedBy?.startsWith(currentUser.name)) {
+      deny('Separation of duties: you cannot approve your own submission.');
+      return;
+    }
     const updated = models.map(m => {
       if (m.id !== modelId) return m;
       const updatedHistory = m.approvalHistory.map((rec, idx) => {
@@ -366,6 +392,14 @@ export function GovernanceProvider({ children }: { children: React.ReactNode }) 
 
   // 3. Approval Management: Reject model
   const rejectModel = (modelId: string, reason: string) => {
+    if (!allowed('review-approval', 'Only Admins, Compliance Officers, and AI Reviewers can review approvals.')) return;
+    const pendingModel = models.find(m => m.id === modelId);
+    const pendingRecord = pendingModel?.approvalHistory.find(rec => rec.status === 'Pending Review');
+    if (!pendingRecord) { deny('There is no pending approval request for this model.'); return; }
+    if (pendingRecord.submittedBy?.startsWith(currentUser.name)) {
+      deny('Separation of duties: you cannot reject/review your own submission.');
+      return;
+    }
     const updated = models.map(m => {
       if (m.id !== modelId) return m;
       const updatedHistory = m.approvalHistory.map((rec, idx) => {
@@ -401,6 +435,7 @@ export function GovernanceProvider({ children }: { children: React.ReactNode }) 
 
   // 4. Performance Monitoring: Performance check & degradation simulation
   const simulatePerformanceCheck = (modelId: string, induceDegradation = false) => {
+    if (!allowed('run-performance-check', 'Only Admins, MLOps Engineers, and Data Scientists can run performance checks.')) return;
     const updated = models.map(m => {
       if (m.id !== modelId) return m;
 
@@ -441,6 +476,7 @@ export function GovernanceProvider({ children }: { children: React.ReactNode }) 
 
   // 5. Fairness Assessment: Calibrate threshold to fix bias
   const calibrateFairnessThreshold = (modelId: string, thresholdShift: number) => {
+    if (!allowed('calibrate-fairness', 'Only Admins, Compliance Officers, and AI Reviewers can calibrate fairness thresholds.')) return;
     const updated = models.map(m => {
       if (m.id !== modelId) return m;
 
@@ -475,6 +511,7 @@ export function GovernanceProvider({ children }: { children: React.ReactNode }) 
 
   // 6. Compliance Management: Toggle item
   const toggleComplianceItem = (modelId: string, itemId: string) => {
+    if (!allowed('update-compliance', 'Only Admins and Compliance Officers can update compliance evidence.')) return;
     const updated = models.map(m => {
       if (m.id !== modelId) return m;
       const updatedItems = m.complianceItems.map(item => {

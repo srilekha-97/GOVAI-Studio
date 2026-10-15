@@ -9,7 +9,7 @@ const UserSchema = new Schema<UserDocument>(
     name: { type: String, required: true },
     role: {
       type: String,
-      enum: ['Data Scientist', 'Compliance Officer', 'MLOps Engineer', 'Auditor'],
+      enum: ['Admin', 'AI Reviewer', 'Data Scientist', 'Compliance Officer', 'MLOps Engineer', 'Auditor'],
       required: true,
     },
     department: String,

@@ -47,8 +47,11 @@ export function LoginModal() {
             GovAI Studio
           </h1>
           <p className="text-xs text-stone-600 max-w-md mx-auto">
-            Responsible AI Model Lifecycle &amp; Governance Platform. Please authenticate to access the Model Registry &amp; Lifecycle Controls.
+            Responsible AI Model Lifecycle &amp; Governance Platform. Choose a demo persona to explore role-specific workflows.
           </p>
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-left text-[11px] leading-relaxed text-amber-900">
+            <strong>Demo mode:</strong> quick login and custom profile selection are for evaluation only; they are not production authentication and do not verify passwords.
+          </div>
         </div>
 
         {/* Tab Switcher */}
@@ -152,6 +155,7 @@ export function LoginModal() {
                   className="w-full bg-[#FAF7F2] border border-stone-300 rounded-xl px-3 py-2 text-stone-900 focus:outline-none focus:border-orange-500 focus:bg-white transition"
                 >
                   <option value="Data Scientist">Data Scientist (Model Creator)</option>
+                  <option value="AI Reviewer">AI Reviewer (Independent Review)</option>
                   <option value="Compliance Officer">Compliance Officer (Auditor)</option>
                   <option value="MLOps Engineer">MLOps Engineer (Deployer)</option>
                   <option value="Auditor">Quality Assurance Auditor</option>

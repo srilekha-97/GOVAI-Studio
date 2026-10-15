@@ -9,6 +9,8 @@ export type ModelStatus =
   | 'Archived';
 
 export type UserRole = 
+  | 'Admin'
+  | 'AI Reviewer'
   | 'Data Scientist' 
   | 'Compliance Officer' 
   | 'MLOps Engineer' 

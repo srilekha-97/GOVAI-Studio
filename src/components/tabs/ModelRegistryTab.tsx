@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useGovernance } from '@/lib/store';
+import { canPerform } from '@/lib/permissions';
 import { RegisteredModel, RiskLevel } from '@/types/governance';
 import { 
   FolderGit2, 
@@ -13,12 +14,17 @@ import {
   Calendar, 
   FileText, 
   X,
-  CheckCircle2
+  CheckCircle2,
+  Send,
+  Clock3,
+  ShieldCheck
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export function ModelRegistryTab() {
-  const { models, selectedModel, selectModel, registerModel, currentUser } = useGovernance();
+  const { models, selectedModel, selectModel, registerModel, submitForReview, currentUser } = useGovernance();
+  const canRegister = canPerform(currentUser.role, 'register-model');
+  const canSubmitReview = canPerform(currentUser.role, 'submit-review');
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [showRegisterModal, setShowRegisterModal] = useState(false);
@@ -97,14 +103,21 @@ export function ModelRegistryTab() {
             </p>
           </div>
 
-          {/* Register Model Action */}
-          <button
-            onClick={() => setShowRegisterModal(true)}
-            className="px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold shadow-md shadow-orange-600/20 transition flex items-center justify-center gap-2 shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Register New AI Model</span>
-          </button>
+          {/* Registration is restricted to authorized roles */}
+          {canRegister ? (
+            <button
+              onClick={() => setShowRegisterModal(true)}
+              className="px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold shadow-md shadow-orange-600/20 transition flex items-center justify-center gap-2 shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Register New AI Model</span>
+            </button>
+          ) : (
+            <div className="max-w-xs rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-[11px] text-stone-600 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 shrink-0 text-stone-500" />
+              Registration is limited to Admins and Data Scientists.
+            </div>
+          )}
         </div>
       </div>
 
@@ -169,6 +182,20 @@ export function ModelRegistryTab() {
                 </span>
               </div>
 
+              {/* Visible lifecycle stage */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-black ${
+                  m.currentApprovalStatus === 'Approved' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' :
+                  m.currentApprovalStatus === 'Under Review' ? 'bg-amber-50 text-amber-800 border-amber-200' :
+                  m.currentApprovalStatus === 'Rejected' ? 'bg-rose-50 text-rose-800 border-rose-200' :
+                  'bg-stone-100 text-stone-700 border-stone-200'
+                }`}>
+                  <Clock3 className="w-3 h-3" /> {m.currentApprovalStatus}
+                </span>
+                {m.currentApprovalStatus === 'Under Review' && <span className="text-[10px] text-amber-800 font-semibold">Waiting for independent review</span>}
+                {m.currentApprovalStatus === 'Draft' && <span className="text-[10px] text-stone-500">Not submitted for deployment approval</span>}
+              </div>
+
               {/* Description */}
               <p className="text-xs text-stone-600 line-clamp-2 leading-relaxed">{m.description}</p>
 
@@ -202,17 +229,31 @@ export function ModelRegistryTab() {
                   <span>Metadata &amp; Card</span>
                 </button>
 
-                <button
-                  onClick={() => selectModel(m.id)}
-                  className={`px-3.5 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 ${
+                <div className="flex items-center gap-2">
+                  {canSubmitReview && (m.currentApprovalStatus === 'Draft' || m.currentApprovalStatus === 'Rejected') && (
+                    <button
+                      onClick={() => {
+                        selectModel(m.id);
+                        const remarks = window.prompt(`Why should ${m.name} be reviewed for deployment?`, 'Please review model performance, fairness, and compliance before production deployment.');
+                        if (remarks !== null) submitForReview(m.id, remarks);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition flex items-center gap-1.5"
+                    >
+                      <Send className="w-3.5 h-3.5" /> Submit for Review
+                    </button>
+                  )}
+                  <button
+                    onClick={() => selectModel(m.id)}
+                    className={`px-3.5 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 ${
                     isSelected 
                       ? 'bg-orange-600 text-white shadow-xs' 
                       : 'bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-200'
                   }`}
                 >
                   {isSelected && <CheckCircle2 className="w-3.5 h-3.5" />}
-                  <span>{isSelected ? 'Active Selection' : 'Select Model'}</span>
-                </button>
+                    <span>{isSelected ? 'Active Selection' : 'Select Model'}</span>
+                  </button>
+                </div>
               </div>
 
             </div>

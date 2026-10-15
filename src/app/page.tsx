@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { GovernanceProvider, useGovernance } from '@/lib/store';
 import { Header } from '@/components/Header';
 import { Navigation, CleanTabId } from '@/components/Navigation';
@@ -13,11 +13,25 @@ import { PerformanceMonitoringTab } from '@/components/tabs/PerformanceMonitorin
 import { FairnessAssessmentTab } from '@/components/tabs/FairnessAssessmentTab';
 import { ComplianceManagementTab } from '@/components/tabs/ComplianceManagementTab';
 import { AuditManagementTab } from '@/components/tabs/AuditManagementTab';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, LockKeyhole, LoaderCircle } from 'lucide-react';
+import { canAccessTab } from '@/lib/permissions';
 
 function DashboardContent() {
-  const { isAuthenticated } = useGovernance();
+  const { isAuthenticated, currentUser } = useGovernance();
   const [activeTab, setActiveTab] = useState<CleanTabId>('registry');
+  const [isTabLoading, setIsTabLoading] = useState(false);
+  const changeTab = (tab: CleanTabId) => {
+    if (tab === activeTab) return;
+    setIsTabLoading(true);
+    setActiveTab(tab);
+    window.setTimeout(() => setIsTabLoading(false), 420);
+  };
+  useEffect(() => {
+    if (!canAccessTab(currentUser.role, activeTab)) {
+      const firstAllowed: CleanTabId[] = ['registry','versioning','comparison','approvals','performance','fairness','compliance','audit'];
+      setActiveTab(firstAllowed.find((tab) => canAccessTab(currentUser.role, tab)) || 'registry');
+    }
+  }, [currentUser.role, activeTab]);
 
   return (
     <div className="min-h-screen bg-[#F8F5F0] text-stone-900 flex flex-col font-sans selection:bg-orange-500 selection:text-white">
@@ -27,19 +41,41 @@ function DashboardContent() {
       {/* Top Header */}
       <Header />
 
+      <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-900 flex items-center justify-center gap-2">
+        <LockKeyhole className="w-3.5 h-3.5 shrink-0" />
+        <span><strong>Prototype access control:</strong> role permissions are demonstrated in the client app. Use server-side authentication and authorization before production deployment.</span>
+      </div>
+
       {/* 8-Module Navigation Bar */}
-      <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
+      <Navigation activeTab={activeTab} onTabChange={changeTab} />
 
       {/* Main Module Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
-        {activeTab === 'registry' && <ModelRegistryTab />}
-        {activeTab === 'versioning' && <VersionControlTab />}
-        {activeTab === 'comparison' && <VersionComparisonTab />}
-        {activeTab === 'approvals' && <ApprovalManagementTab />}
-        {activeTab === 'performance' && <PerformanceMonitoringTab />}
-        {activeTab === 'fairness' && <FairnessAssessmentTab />}
-        {activeTab === 'compliance' && <ComplianceManagementTab />}
-        {activeTab === 'audit' && <AuditManagementTab />}
+        {isTabLoading ? (
+          <div className="min-h-[48vh] flex flex-col items-center justify-center gap-4 text-center" role="status" aria-live="polite">
+            <div className="relative flex h-20 w-20 items-center justify-center rounded-3xl border border-orange-200 bg-white shadow-lg shadow-orange-100">
+              <div className="absolute inset-1 rounded-2xl border-2 border-orange-100" />
+              <ShieldCheck className="h-8 w-8 text-orange-600" />
+              <LoaderCircle className="absolute -right-2 -top-2 h-7 w-7 animate-spin text-orange-600" />
+            </div>
+            <div>
+              <p className="text-sm font-black text-stone-900">Loading governance module</p>
+              <p className="mt-1 text-xs text-stone-500">Preparing your workspace…</p>
+            </div>
+            <div className="h-1.5 w-48 overflow-hidden rounded-full bg-orange-100">
+              <div className="h-full w-2/3 animate-pulse rounded-full bg-gradient-to-r from-orange-500 to-amber-400" />
+            </div>
+          </div>
+        ) : <>
+        {activeTab === 'registry' && canAccessTab(currentUser.role, 'registry') && <ModelRegistryTab />}
+        {activeTab === 'versioning' && canAccessTab(currentUser.role, 'versioning') && <VersionControlTab />}
+        {activeTab === 'comparison' && canAccessTab(currentUser.role, 'comparison') && <VersionComparisonTab />}
+        {activeTab === 'approvals' && canAccessTab(currentUser.role, 'approvals') && <ApprovalManagementTab />}
+        {activeTab === 'performance' && canAccessTab(currentUser.role, 'performance') && <PerformanceMonitoringTab />}
+        {activeTab === 'fairness' && canAccessTab(currentUser.role, 'fairness') && <FairnessAssessmentTab />}
+        {activeTab === 'compliance' && canAccessTab(currentUser.role, 'compliance') && <ComplianceManagementTab />}
+        {activeTab === 'audit' && canAccessTab(currentUser.role, 'audit') && <AuditManagementTab />}
+        </>}
       </main>
 
       {/* Clean Footer - Warm Beige/White/Orange/Black */}

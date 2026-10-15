@@ -2,6 +2,22 @@ import { RegisteredModel, UserPersona, AuditLogEntry } from '@/types/governance'
 
 export const INITIAL_PERSONAS: UserPersona[] = [
   {
+    id: 'usr-admin',
+    role: 'Admin',
+    name: 'Platform Administrator',
+    department: 'Platform Security & Operations',
+    avatar: '🛡️',
+    email: 'admin@enterprise.ai',
+  },
+  {
+    id: 'usr-reviewer',
+    role: 'AI Reviewer',
+    name: 'Jordan Patel',
+    department: 'Independent AI Review',
+    avatar: '🧠',
+    email: 'jordan.patel@enterprise.ai',
+  },
+  {
     id: 'usr-aris',
     role: 'Data Scientist',
     name: 'Dr. Aris Thorne',

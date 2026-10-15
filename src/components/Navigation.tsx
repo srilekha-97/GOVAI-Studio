@@ -12,6 +12,7 @@ import {
   History 
 } from 'lucide-react';
 import { useGovernance } from '@/lib/store';
+import { canAccessTab } from '@/lib/permissions';
 
 export type CleanTabId = 
   | 'registry' 
@@ -29,7 +30,7 @@ interface NavigationProps {
 }
 
 export function Navigation({ activeTab, onTabChange }: NavigationProps) {
-  const { selectedModel, models } = useGovernance();
+  const { selectedModel, models, currentUser } = useGovernance();
 
   // Status badges
   const pendingReviewCount = models.filter(m => m.currentApprovalStatus === 'Under Review').length;
@@ -104,7 +105,7 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
   return (
     <div className="bg-[#FAF7F2] border-b border-stone-200 px-4 lg:px-8 py-2 sticky top-[65px] z-30 backdrop-blur-md overflow-x-auto scrollbar-none shadow-xs">
       <div className="flex items-center space-x-1.5 sm:space-x-2 min-w-max">
-        {tabs.map((tab) => {
+        {tabs.filter((tab) => canAccessTab(currentUser.role, tab.id)).map((tab) => {
           const isActive = activeTab === tab.id;
           return (
             <button

@@ -9,7 +9,7 @@ const AuditLogSchema = new Schema<AuditLogDocument>(
     timestamp: { type: String, required: true },
     userRole: {
       type: String,
-      enum: ['Data Scientist', 'Compliance Officer', 'MLOps Engineer', 'Auditor'],
+      enum: ['Admin', 'AI Reviewer', 'Data Scientist', 'Compliance Officer', 'MLOps Engineer', 'Auditor'],
       required: true,
     },
     userName: { type: String, required: true },

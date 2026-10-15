@@ -6,7 +6,9 @@ import {
   CheckSquare, 
   CheckCircle2, 
   XCircle, 
-  Send 
+  Send,
+  Clock3,
+  UserRoundCheck
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -22,7 +24,9 @@ export function ApprovalManagementTab() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [showRejectModal, setShowRejectModal] = useState(false);
 
-  const [targetModelId, setTargetModelId] = useState(selectedModel.id);
+  const firstPendingModel = models.find(m => m.currentApprovalStatus === 'Under Review');
+  const [targetModelId, setTargetModelId] = useState(firstPendingModel?.id || selectedModel.id);
+  const pendingModels = models.filter(m => m.currentApprovalStatus === 'Under Review');
 
   const targetModel = models.find(m => m.id === targetModelId) || selectedModel;
 
@@ -96,6 +100,45 @@ export function ApprovalManagementTab() {
           </div>
         </div>
       </div>
+
+      {/* Explicit reviewer queue: submitted models wait here for an authorized decision */}
+      <section className="bg-white border-2 border-stone-200 rounded-3xl p-5 sm:p-6 space-y-4 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-black uppercase tracking-wider text-stone-900 flex items-center gap-2"><UserRoundCheck className="w-4 h-4 text-orange-600" /> Pending Approval Queue</h2>
+            <p className="mt-1 text-xs text-stone-500">Only Compliance Officers, AI Reviewers, and Admins can make a decision. Authors cannot approve their own submission.</p>
+          </div>
+          <span className={`rounded-full border px-3 py-1 text-xs font-black ${pendingModels.length ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'}`}>{pendingModels.length} awaiting review</span>
+        </div>
+        {pendingModels.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-stone-300 bg-stone-50 p-6 text-center">
+            <CheckCircle2 className="mx-auto h-7 w-7 text-emerald-600" />
+            <p className="mt-2 text-sm font-bold text-stone-800">No models are waiting for approval</p>
+            <p className="mt-1 text-xs text-stone-500">When a Data Scientist submits a Draft model for review, it will appear here.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            {pendingModels.map(model => {
+              const request = model.approvalHistory.find(record => record.status === 'Pending Review');
+              const isCurrent = targetModel.id === model.id;
+              return (
+                <button key={model.id} onClick={() => { setTargetModelId(model.id); selectModel(model.id); }} className={`text-left rounded-2xl border p-4 transition ${isCurrent ? 'border-orange-400 bg-orange-50 ring-2 ring-orange-100' : 'border-stone-200 bg-stone-50 hover:border-orange-300 hover:bg-white'}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div><p className="text-sm font-black text-stone-900">{model.name}</p><p className="mt-1 text-[11px] text-stone-500">Version {request?.version || model.activeVersion} · {model.riskLevel}</p></div>
+                    <span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-black text-amber-900"><Clock3 className="mr-1 inline h-3 w-3" /> Pending</span>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
+                    <div className="rounded-xl bg-white/80 p-2"><span className="text-stone-500">Submitted by</span><p className="mt-0.5 font-bold text-stone-800">{request?.submittedBy || model.owner}</p></div>
+                    <div className="rounded-xl bg-white/80 p-2"><span className="text-stone-500">Submitted on</span><p className="mt-0.5 font-bold text-stone-800">{request?.submittedDate || '—'}</p></div>
+                  </div>
+                  <p className="mt-2 text-[11px] text-stone-600 line-clamp-2">{request?.reviewComments || 'No submission notes provided.'}</p>
+                  <p className="mt-3 text-[11px] font-black text-orange-700">{isCurrent ? 'Selected for review' : 'Select this request →'}</p>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
       {/* Review Action Card for Selected Model */}
       <div className="bg-white border-2 border-stone-200 rounded-3xl p-6 space-y-4 shadow-xs">
